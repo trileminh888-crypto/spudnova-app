@@ -5,6 +5,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 /* Layout: mascot header with live counters, a two-tab switcher, then a month calendar beside the day panel (list, form, upcoming); the second tab is a spreadsheet-style tracker with Excel import and export. */
 :root{
@@ -647,7 +650,39 @@ h3.sm{font-size:1rem}
   </div>
 </div>
 <div id="toasts" role="status" aria-live="polite"></div>
-
+<script>
+(function(){
+  if(window.claude&&window.claude.use)return;
+  var st=document.createElement('style');
+  st.textContent='.cloud button{font:inherit;font-weight:800;font-size:.78rem;color:var(--ink);background:var(--star);border:2px solid var(--line);border-radius:999px;padding:1px 10px;cursor:pointer}';
+  document.head.appendChild(st);
+  function btn(label,fn){
+    var host=document.getElementById('cloud');if(!host)return;
+    var old=document.getElementById('authbtn');if(old)old.remove();
+    var b=document.createElement('button');b.id='authbtn';b.type='button';b.textContent=label;b.addEventListener('click',fn);host.appendChild(b);
+  }
+  if(!window.firebase){return}
+  var app=firebase.initializeApp({apiKey:"AIzaSyA8_8_VRYULBIQSpqto9eLVGg73wsdUmTQ",authDomain:"spudnova-e23ba.firebaseapp.com",projectId:"spudnova-e23ba",storageBucket:"spudnova-e23ba.firebasestorage.app",messagingSenderId:"906527813423",appId:"1:906527813423:web:abfbf27a932ed7810d7bda"});
+  var auth=firebase.auth(),fs=firebase.firestore();
+  try{fs.enablePersistence({synchronizeTabs:true}).catch(function(){})}catch(e){}
+  var uidP=new Promise(function(res){var un=auth.onAuthStateChanged(function(u){un();res(u?u.uid:null)})});
+  uidP.then(function(uid){
+    if(uid){btn('Đăng xuất',function(){auth.signOut().then(function(){location.reload()})})}
+    else{btn('Đăng nhập Google',function(){
+      var pr=new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(pr).then(function(){location.reload()}).catch(function(e){
+        if(e&&e.code==='auth/popup-blocked'){auth.signInWithRedirect(pr)}
+      });
+    })}
+  });
+  var dbWrap={collection:function(p){return fs.collection(p.replace('data/users/','users/'))}};
+  window.claude={use:function(n){
+    if(n==='user')return Promise.resolve({id:function(){return uidP}});
+    if(n==='db')return Promise.resolve(dbWrap);
+    return Promise.resolve(null);
+  }};
+})();
+</script>
 <script>
 (function(){
 'use strict';
